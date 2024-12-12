@@ -137,6 +137,8 @@ function resolvePath(path: string | undefined): Uri | undefined {
     return;
   }
 
+  path =  resolveEnvVariables(path)
+
   if (path.startsWith("/")) {
     return Uri.parse(path);
   }
@@ -154,6 +156,20 @@ function resolvePath(path: string | undefined): Uri | undefined {
   }
 
   return;
+}
+
+
+function resolveEnvVariables(path?: string): string {
+
+  if (!path) {
+    return ''
+  }
+
+  return path.replace(/\$\{env:\s*([\w_]+)\}/g, (_, variableName) => {
+    const value = process.env[variableName];
+    return value !== undefined ? value : '';
+  });
+
 }
 
 function formatUris(uris: Uri[] | undefined, output: FullParam["output"]): string | undefined {

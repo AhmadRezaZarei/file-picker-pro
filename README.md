@@ -87,3 +87,33 @@ Select env file in launch.json:
   ]
 }
 ```
+
+Select a file from HOME in launch.json:
+
+```jsonc
+{
+  "version": "0.2.0",
+  "configurations": [
+   {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Program",
+      "program": "${workspaceFolder}\\app.js",
+      "envFile": "${input:pickAFile}"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "pickAFile",
+      "type": "command",
+      "command": "launch-file-picker.pick",
+      "args": {
+        "options": {
+          "title": "pick a file",
+          "path": "${env: HOME}",
+        }
+      }
+    }
+  ]
+}
+```
