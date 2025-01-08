@@ -14,6 +14,7 @@ type Options = Omit<OpenDialogOptions, "defaultUri" | "filters"> & {
   canSelectMany: boolean;
   filterRegExp?: string;
   filterExt?: string;
+  defaultEnvFilePath?: string
 };
 
 type FullParam = {
@@ -32,8 +33,8 @@ export async function pickHandler(args?: Param): Promise<string | undefined> {
   const { options, output } = parseArgs(args);
 
   const uris = options.native
-    ? await pickWithNative(resolvePath(options.path), options)
-    : await pickWithQuick(resolvePath(options.path) ?? Uri.parse(""), options);
+    ? await pickWithNative(resolvePath(options.defaultEnvFilePath,options.path), options)
+    : await pickWithQuick(resolvePath(options.defaultEnvFilePath, options.path) ?? Uri.parse(""), options);
 
   if (uris != null) {
     return formatUris(uris, output);
@@ -42,7 +43,7 @@ export async function pickHandler(args?: Param): Promise<string | undefined> {
     return output.default;
   }
   if (output.defaultPath != null) {
-    const defaultUri = resolvePath(output.defaultPath);
+    const defaultUri = resolvePath(options.defaultEnvFilePath, output.defaultPath);
     const formated = defaultUri != null ? formatUris([defaultUri], output) : undefined;
     return formated ?? output.defaultPath;
   }
@@ -127,7 +128,7 @@ async function pickWithQuick(dir: Uri, options: FullParam["options"]): Promise<U
   return items.map((i) => i.uri);
 }
 
-function resolvePath(path: string | undefined): Uri | undefined {
+function resolvePath(defaultEnvFilePath: string | undefined, path: string | undefined): Uri | undefined {
   const workspaceFolders = workspace.workspaceFolders;
 
   if (path == null) {
@@ -137,7 +138,7 @@ function resolvePath(path: string | undefined): Uri | undefined {
     return;
   }
 
-  path =  resolveEnvVariables(path)
+  path =  resolveEnvVariables(defaultEnvFilePath,path)
 
   if (path.startsWith("/")) {
     return Uri.parse(path);
@@ -159,13 +160,17 @@ function resolvePath(path: string | undefined): Uri | undefined {
 }
 
 
-function resolveEnvVariables(path?: string): string {
+function resolveEnvVariables(defaultEnvFilePath ?:string, path?: string): string {
 
   if (!path) {
     return ''
   }
 
   return path.replace(/\$\{env:\s*([\w_]+)\}/g, (_, variableName) => {
+
+    // check if the variable is defined in the environment
+
+
     const value = process.env[variableName];
     return value !== undefined ? value : '';
   });

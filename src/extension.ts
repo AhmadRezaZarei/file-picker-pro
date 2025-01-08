@@ -3,7 +3,7 @@ import { pickHandler } from "./commands/pick";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
-    vscode.commands.registerCommand("launch-file-picker.pick", pickHandler)
+    vscode.commands.registerCommand("file-picker-pro.pick", pickHandler)
   );
 }
 

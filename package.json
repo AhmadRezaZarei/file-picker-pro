@@ -1,13 +1,13 @@
 {
-  "name": "launch-file-picker",
-  "displayName": "Launch File Picker",
+  "name": "file-picker-pro",
+  "displayName": "File Picker Pro",
   "description": "for launch.json and tasks.json",
   "version": "1.0.0",
   "publisher": "hw104",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hw104/vscode-launch-file-picker.git"
+    "url": "https://github.com/AhmadRezaZarei/file-picker-pro"
   },
   "engines": {
     "vscode": "^1.75.0"

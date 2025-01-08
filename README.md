@@ -9,7 +9,7 @@ The file (or directory) path picker for `launch.json` and `tasks.json`.
    {
       "id": "pickSingleFile",
       "type": "command",
-      "command": "launch-file-picker.pick",
+      "command": "file-picker-pro.pick",
       "args": ".envs", // (optional) The directory the dialog shows when opened.
    }
    ```
@@ -72,7 +72,7 @@ Select env file in launch.json:
     {
       "id": "pickEnvFile",
       "type": "command",
-      "command": "launch-file-picker.pick",
+      "command": "file-picker-pro.pick",
       "args": {
         "options": {
           "title": "pick env file",
@@ -106,7 +106,7 @@ Select a file from HOME in launch.json:
     {
       "id": "pickAFile",
       "type": "command",
-      "command": "launch-file-picker.pick",
+      "command": "file-picker-pro.pick",
       "args": {
         "options": {
           "title": "pick a file",
