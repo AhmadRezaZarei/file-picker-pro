@@ -221,7 +221,7 @@ async function resolvePath(defaultWorkspace: string| undefined, defaultInputPath
     return;
   }
 
-  path =  await resolveEnvVariables(path, defaultEnvFile, defaultWorkspace );
+  path =  await resolveEnvVariables(path, defaultEnvFile, defaultWorkspace);
 
   if (path.startsWith("/")) {
     return Uri.parse(path);
@@ -266,7 +266,7 @@ async function resolveEnvVariables( path?: string, defaultEnvFile?: string, defa
   let envMap = new Map<string, string>();
 
   if (defaultEnvFile) {
-    let envFileContent = await readWorkspaceFile(defaultEnvFile, defaultEnvFile);
+    let envFileContent = await readWorkspaceFile(defaultEnvFile, defaultWorkspace);
 
     envMap = parseEnvContent(envFileContent);
   }
