@@ -4,6 +4,7 @@
   "description": "for launch.json and tasks.json",
   "version": "1.0.2",
   "publisher": "AhmadrezaZarei",
+  "icon": "images/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
