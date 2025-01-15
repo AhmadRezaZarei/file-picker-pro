@@ -4,6 +4,8 @@ import { RPartial } from "../common";
 import showQuickPick = window.showQuickPick;
 import showOpenDialog = window.showOpenDialog;
 import fs = workspace.fs;
+import { TextDecoder } from "util";
+import { stringify } from "querystring";
 
 type Options = Omit<OpenDialogOptions, "defaultUri" | "filters"> & {
   path?: string;
@@ -14,7 +16,9 @@ type Options = Omit<OpenDialogOptions, "defaultUri" | "filters"> & {
   canSelectMany: boolean;
   filterRegExp?: string;
   filterExt?: string;
-  defaultEnvFilePath?: string
+  defaultInputPath?: string
+  defaultWorkspace?: string
+  defaultEnvFile?: string
 };
 
 type FullParam = {
@@ -33,8 +37,8 @@ export async function pickHandler(args?: Param): Promise<string | undefined> {
   const { options, output } = parseArgs(args);
 
   const uris = options.native
-    ? await pickWithNative(resolvePath(options.defaultEnvFilePath,options.path), options)
-    : await pickWithQuick(resolvePath(options.defaultEnvFilePath, options.path) ?? Uri.parse(""), options);
+    ? await pickWithNative(await resolvePath(options.defaultWorkspace,options.defaultInputPath, options.defaultEnvFile,options.path), options)
+    : await pickWithQuick(await resolvePath(options.defaultWorkspace, options.defaultInputPath, options.defaultEnvFile, options.path) ?? Uri.parse(""), options);
 
   if (uris != null) {
     return formatUris(uris, output);
@@ -43,7 +47,7 @@ export async function pickHandler(args?: Param): Promise<string | undefined> {
     return output.default;
   }
   if (output.defaultPath != null) {
-    const defaultUri = resolvePath(options.defaultEnvFilePath, output.defaultPath);
+    const defaultUri = await resolvePath(options.defaultWorkspace, options.defaultInputPath, options.defaultEnvFile, output.defaultPath);
     const formated = defaultUri != null ? formatUris([defaultUri], output) : undefined;
     return formated ?? output.defaultPath;
   }
@@ -128,7 +132,86 @@ async function pickWithQuick(dir: Uri, options: FullParam["options"]): Promise<U
   return items.map((i) => i.uri);
 }
 
-function resolvePath(defaultEnvFilePath: string | undefined, path: string | undefined): Uri | undefined {
+function resolveEnvPath(filePath: string, defaultWorkspace?: string): Uri | undefined {
+  const workspaceFolders = workspace.workspaceFolders;
+  
+  
+  if (filePath.startsWith("/")) {
+    return Uri.parse(filePath);
+  }
+    
+  if (filePath == null) {
+    if ((workspaceFolders?.length ?? 0) >= 1) {
+      return workspaceFolders![0].uri;
+    }
+  }
+
+  if (workspaceFolders?.length === 1) {
+    return Uri.joinPath(workspaceFolders[0].uri, filePath!);
+  }
+
+  const defaultPath = Uri.parse(filePath!).path;
+  const workspaceFolder = workspaceFolders?.find((f) => {
+    return defaultPath.startsWith(basename(f.uri.path) + "/");
+  });
+  if (workspaceFolder != null) {
+    return Uri.joinPath(workspaceFolder.uri, filePath!);
+  }
+
+  if (defaultWorkspace) {
+    const workspaceFolder = workspaceFolders?.find((f) => {
+      return  f.name == defaultWorkspace
+    });
+
+    if (workspaceFolder != null) {
+      return Uri.joinPath(workspaceFolder.uri, filePath!);
+    }
+  }
+
+  return 
+}
+
+function parseEnvContent(envContent: string): Map<string, string> {
+  const envMap = new Map<string, string>();
+
+  // Split the content into lines
+  const lines = envContent.split(/\r?\n/);
+
+  for (const line of lines) {
+    // Ignore empty lines or lines starting with a comment
+    if (line.trim() === '' || line.trim().startsWith('#')) {
+      continue;
+    }
+
+    // Split the line into key and value
+    const [key, ...valueParts] = line.split('=');
+    if (key) {
+      const value = valueParts.join('=').trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1'); // Remove surrounding quotes
+      envMap.set(key.trim(), value);
+    }
+  }
+
+  return envMap;
+}
+
+
+async function readWorkspaceFile(filePath: string, defaultWorkspace?: string): Promise<string> {
+  try {
+
+    let uri = resolveEnvPath(filePath, defaultWorkspace)
+
+    const fileContent = await fs.readFile(uri!);
+    const content = new TextDecoder('utf-8').decode(fileContent);
+    return content;
+  } catch (error) {
+    console.log('file-pick-pro:', error);
+    return  '';
+  }
+}
+
+
+
+async function resolvePath(defaultWorkspace: string| undefined, defaultInputPath: string | undefined, defaultEnvFile: string | undefined, path: string | undefined): Promise<Uri | undefined> {
   const workspaceFolders = workspace.workspaceFolders;
 
   if (path == null) {
@@ -138,40 +221,66 @@ function resolvePath(defaultEnvFilePath: string | undefined, path: string | unde
     return;
   }
 
-  path =  resolveEnvVariables(defaultEnvFilePath,path)
+  path =  await resolveEnvVariables(path, defaultEnvFile, defaultWorkspace );
 
   if (path.startsWith("/")) {
     return Uri.parse(path);
   }
 
-  if (workspaceFolders?.length === 1) {
-    return Uri.joinPath(workspaceFolders[0].uri, path);
+  if (defaultInputPath && (path === '' || path === undefined)){
+      path = defaultInputPath;
   }
 
-  const defaultPath = Uri.parse(path).path;
-  const workspaceFolder = workspaceFolders?.find((f) =>
-    defaultPath.startsWith(basename(f.uri.path) + "/")
-  );
+  if (workspaceFolders?.length === 1) {
+    return Uri.joinPath(workspaceFolders[0].uri, path!);
+  }
+
+  const defaultPath = Uri.parse(path!).path;
+  const workspaceFolder = workspaceFolders?.find((f) => {
+    return defaultPath.startsWith(basename(f.uri.path) + "/");
+  });
   if (workspaceFolder != null) {
-    return Uri.joinPath(workspaceFolder.uri, path);
+    return Uri.joinPath(workspaceFolder.uri, path!);
+  }
+
+  if (defaultWorkspace) {
+    const workspaceFolder = workspaceFolders?.find((f) => {
+      return  f.name == defaultWorkspace
+    });
+
+    if (workspaceFolder != null) {
+      return Uri.joinPath(workspaceFolder.uri, path!);
+    }
   }
 
   return;
 }
 
 
-function resolveEnvVariables(defaultEnvFilePath ?:string, path?: string): string {
+async function resolveEnvVariables( path?: string, defaultEnvFile?: string, defaultWorkspace?: string): Promise<string> {
 
   if (!path) {
     return ''
   }
 
+  let envMap = new Map<string, string>();
+
+  if (defaultEnvFile) {
+    let envFileContent = await readWorkspaceFile(defaultEnvFile, defaultEnvFile);
+
+    envMap = parseEnvContent(envFileContent);
+  }
+
   return path.replace(/\$\{env:\s*([\w_]+)\}/g, (_, variableName) => {
 
-    // check if the variable is defined in the environment
+    let value: string | undefined = undefined;
 
+    if(envMap.has(variableName)) {
+      value = envMap.get(variableName)!;
+    } else {
+       value = process.env[variableName];
+    }
 
-    const value = process.env[variableName];
     return value !== undefined ? value : '';
   });
 

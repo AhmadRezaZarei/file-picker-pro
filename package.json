@@ -2,8 +2,8 @@
   "name": "file-picker-pro",
   "displayName": "File Picker Pro",
   "description": "for launch.json and tasks.json",
-  "version": "1.0.0",
-  "publisher": "hw104",
+  "version": "1.0.1",
+  "publisher": "AhmadrezaZarei",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
   "contributes": {
     "commands": [
       {
-        "command": "launch-file-picker.pick",
+        "command": "file-picker-pro.pick",
         "title": "Pick",
         "enablement": "false"
       }
